@@ -1,0 +1,62 @@
+
+       and $addr, $addr, ZERO   #zeros out the address register to get starting point
+LOOP1: lw  $read $addr
+       and $write, $write, ZERO #zero out write register
+       and $work, $work, ZERO   #zero out work
+       or  $work, $read         #copy plaintext into work for shifting
+       xor $read, MP8           #parity bit = p8
+       sfr $write, $work        #shifts $read[b11:b5] to $write[b7:b1]
+       sfr $write, $work
+       sfr $write, $work
+       sfr $write, $work
+       sfr $write, $work
+       sfr $write, $work
+       sfr $write, $work
+       sfr $write, $work
+       sfr $write, $work
+       sfr $write, $work
+       sfr $write, $work
+       sfr $write, $work
+       shb  $write, parity       #shifts p8 into $write b0
+       sfr $write, $read        #shifts $read[b4:b2] into write
+       sfr $write, $work
+       sfr $write, $work
+       xor $read, MP4
+       shb  $write, parity       #shifts p4 into write
+       sfr $write, $work        #shift b1
+       xor $read, MP2
+       shb  $write, parity       #shifts p2 into write
+       xor $read, MP1
+       shb  $write, parity       #shifts p1 into write
+       and $work, $work, ZERO   #zero out work for copy
+       or  $work, $write        #copies write into work for last mask
+       xor $work, MP0
+       shb  $write, parity       #writes P0 to $write
+       sw1 $addr
+       add $ctr, 1
+       bne $ctr, MSGLEN, LOOP1
+
+
+#EXPERIMENTING WITH SETBIT
+       nop                      # $inc has to be set to zero
+LOOP1: lw  $readU, $addr        #load bytes
+       inc
+       lw  $readL, $addr
+       luv $work1, ZERO
+       and $writeU, $work1      #zeroing out write
+       and $writeL, $work1      #zeroing out write
+       #b11
+       cpy $readU, $work1
+       gb  $work1, 7            #saves b11 into bitresult
+       cpy $work, $writeU       #copies current state of writeU into work
+       sb  $work1， 7           #sets b11 in write
+       cpy $writeU, $work1      #saves into write
+       #b10
+       cpy $readU, $work1
+       gb  $work1, 6            #saves b11 into bitresult
+       cpy $work, $writeU       #copies current state of writeU into work
+       sb  $work1， 6           #sets b11 in write
+       cpy $writeU, $work1      #saves into write
+       #populate the rest of the write register
+       #time for the parity bits:
+       luv $work1, ZERO 

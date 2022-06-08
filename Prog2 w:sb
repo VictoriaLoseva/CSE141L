@@ -1,0 +1,82 @@
+       inc THIRTY        #sets addr/inc to 30
+LOOP2: lw $readU         #read B
+       inc
+       lw $readL
+       luv $work2, ZERO    #zero out the write regs
+
+       # copy bits from read into their decoded positions (could be combined
+       # with the S0 calculation, but for sake of readability I put it here)
+       cpy $work1, $readU
+       luv $work2, ZERO
+       gb  $work1, 7
+       sb  $work2, 2
+       gb  $work1, 6
+       sb  $work2, 1
+       gb  $work1, 5
+       sb  $work2, 0
+       cpy $writeU, $work2     #B11-9 done
+       luv $work2, ZERO
+       gb  $work1, 4
+       sb  $work2, 7
+       gb  $work1, 3
+       sb  $work2, 6
+       gb  $work1, 2
+       sb  $work2, 5
+       gb  $work1, 1
+       sb  $work2, 4
+       cpy $work1, $readL
+       gb  $work1, 7
+       sb  $work2, 3
+       gb  $work1, 6
+       sb  $work2, 2
+       gb  $work1, 5
+       sb  $work2, 1
+       gb  $work1, 4
+       sb  $work2, 0           #B8-1 done
+
+
+       #calculate S8-0
+       luv $work2, ZERO   #zero out work2 for S8-0 values
+       #S0:
+       cpy $work1, $readU
+       xor $work1
+       cpy $work1, $writeU
+       xor $work1
+       sb  $work2, 0     #now work2[0] = S8
+       #s1:
+       luv $work1, ZERO
+       flip $work1, 1
+       flip $work1, 3
+       flip $work1, 5
+       flip $work1, 7
+       and $work1, $readU
+       xor $work1
+       luv $work1, ZERO
+       flip $work1, 1
+       flip $work1, 3
+       flip $work1, 5
+       flip $work1, 7
+       and $work1, $readL
+       xor $work1
+       sb  $work2, 1    #now work2[1] = S4
+       #s2:
+       #s4:
+       #s8:
+
+       #now implement branch logic:
+       luv $work1, ZERO
+       beq $work2, $work1     #skips two ahead if S8-0=0000
+       goto Step3_writing
+       flip $work1, 0
+       beq  $work2, $work1
+       goto Step3_writing     #skips two ahead if S8-0=0001
+       shr  $work1
+       beq  $work2, $work1
+       goto Step3_writing     #skips two ahead if S8-0=0010
+       shr  $work1
+       beq  $work2, $work1
+       goto Step3_writing     #skips two ahead if S8-0=0100
+       shr  $work1
+       beq  $work2, $work1
+       goto Step3_writing     #skips two ahead if S8-0=1000
+       
