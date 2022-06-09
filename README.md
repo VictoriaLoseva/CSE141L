@@ -1,7 +1,7 @@
 # CSE141L
 TODO: 
 1. ALU unit test 
-   a. See the synthesizable ALU.sv for an example
+   a. See the synthesizable ALU.sv for an example /n
    b. ADD, AND, SETB, FLIP, SHL, BXOR - go in the first case(op) I believe
    c. XOR, GETBIT, RSET - in the second case(op) 
    d. modify testbench and definitions accordigly
