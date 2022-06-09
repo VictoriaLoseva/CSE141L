@@ -32,8 +32,9 @@ TODO:
      
      b. implement in top_level.sv
 
-9. Once unit tests on processor elements are good, go to debugging assembler (for example, simple branches and trying to calculate P4) 
-10. Finish writing the assembly for programs 1-3 
+9.  Control.sv: I propose generating all control signals for every instruction in the set seperately, it might make it easier to debug. 
+10. Once unit tests on processor elements are good, go to debugging assembler (for example, simple branches and trying to calculate P4) 
+11. Finish writing the assembly for programs 1-3 
     a. Fill in the blanks for P1
     b. Fill in the blanks for P2 
     c. Figure out branching logic in P2 
@@ -41,4 +42,5 @@ TODO:
 11. Debug P1 
 12. Debug P2 
 13. Debug P3 
-14. Submit and celebrate! 
+14. Write report
+15. Submit and celebrate! 
