@@ -53,7 +53,8 @@ class Instruction:
 
 
     def getMachineCode(self):
-        self.getParsedList()
+        if self.getParsedList() == -1:
+            return None
         self.parseOpcode()
         self.parse()
         self.machineCode = self.opcode + self.rd + self.rs + self.h + self.lut + self.imm
@@ -92,15 +93,19 @@ class Instruction:
         return self.opcode
 
     def getParsedList(self):
-        if self.instruction == None:
+        if self.instruction == None or self.instruction == '':
             return -1
         ins = self.instruction
+        if ins[-1] == '\n':
+            ins = ins[:-1]
         for i in range(len(ins)):
             if ins[i] == ',':
                 ins = ins[:i] + ' ' + ins[i+1:]
         ins = ins.lower().split(' ')
         ins = [x for x in ins if x != '']
         self.parsedList = ins
+        if len(ins) < 1:
+            return -1
         return
 
     def formatBinary(self, binstr, formatLength):
@@ -110,11 +115,29 @@ class Instruction:
             binstr = binstr[1:]
         return binstr
 
-while(True):
-    print("**************************")
-    instruction_string = input("Enter instruction: ")
-    ins = Instruction(instruction_string)
-    code = ins.getMachineCode()
-    print("Machine code is: ", code)
-    print("**************************")
-    print()
+def write_machine_code_to_file(input_file, output_file):
+    lines = []
+    machine_code_list = []
+
+    # read instructions from input file
+    with open(input_file, 'r') as f:
+        lines = f.readlines()
+    f.close()
+
+    # convert instruction to machine code
+    for addr in range(len(lines)):
+        ins_str = lines[addr]
+        ins = Instruction(ins_str, addr)
+        machine_code = ins.getMachineCode()
+        machine_code_list.append(machine_code)
+
+    # write machine code to output file
+    f = open(output_file, "w")
+    print('file created')
+    for code in machine_code_list:
+        if code:
+            f.write(code+'\n')
+    f.close()
+
+
+write_machine_code_to_file('program.sv', "machineCode.txt")
