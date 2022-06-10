@@ -4,19 +4,19 @@ Items 1-7 are completely parallelizable, so are 10 and 11-13, we can call out wh
 
 TODO: 
 
-1. ALU unit test 
+1. ~~ALU unit test ~~
 
-   a. See the synthesizable ALU.sv for an example
+   ~~a. See the synthesizable ALU.sv for an example~~
    
-   b. ADD, AND, SETB, FLIP, SHL, BXOR - go in the first case(op) I believe
+   ~~b. ADD, AND, SETB, FLIP, SHL, BXOR - go in the first case(op) I believe
 
-   c. XOR, GETBIT, RSET - in the second case(op) 
+   ~~c. XOR, GETBIT, RSET - in the second case(op) 
 
-   d. modify testbench and definitions accordingly
+   ~~d. modify testbench and definitions accordingly
 
-2. Register file (not sure yet)
+~~2. Register file
 
-3. VLUT (values); ZERO, ONE, THIRTY, SIXTY
+~~3. VLUT (values); ZERO, ONE, THIRTY, SIXTY
 
 4. ALUT (addreses): TBD, probably changes with assembly & gotta load them in every time
 
