@@ -8,6 +8,7 @@ module COUNTER (
   input                Reset,
   input                WriteEn,
   input                ValIn,
+  input  logic  [2:0]  Offset;
   output logic  [7:0]  ValOut
 );
 
@@ -15,14 +16,14 @@ logic [7:0] CtrValue;
 
 
 // combinational reads
-
 always_comb begin
-    ValOut = ValIn;
+  case(Offset)
+    2'b01: ValOut = CtrValue + 30;
+    2'b10: ValOut = CtrValue + 60;
+    default: Valout = CtrValue;
 end
 
 // sequential (clocked) writes
-
-// Works just like data_memory writes
 always_ff @ (posedge Clk) begin
   if (Reset) CtrValue <= '0;
   else if (WriteEn) begin

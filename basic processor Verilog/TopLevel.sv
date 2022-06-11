@@ -6,6 +6,7 @@ module TopLevel(
   input        Reset,      // init/reset, active high
                Start,      // start next program
                Clk,        // clock -- posedge used inside design
+  output logic [7:0] ALUDebug,
   output logic Ack         // done flag from DUT
 );
 
@@ -58,10 +59,11 @@ logic [1:0] Ctrl1_TargSel_out;   // one trick to help with target range
 logic [2:0] ALUT_Row_in;         // LUT row number
 logic [4:0] VLUT_Row_in;         // VLUT row number
 
-logic [1:0] Ctrl1_RaddrA_Select; // Selects correct Input A
-logic [1:0] Ctrl1_RaddrB_Select; // Selects correct Input B
+logic [1:0] Ctrl1_ALUA_Select; // Selects correct Input A
+logic [1:0] Ctrl1_ALUB_Select; // Selects correct Input B
+logic       Ctrl1_ALUBitValIn_Select;
 logic       Ctrl1_RegWriteEn;    // Write to reg enable
-logic       Ctrl1_RFDAtaIn_Select; //Select correct DataIn
+logic [2:0] Ctrl1_RFDAtaIn_Select; //Select correct DataIn
 
 logic       Ctrl1_CtrUnitWrite_en;  //Writing to Ctr
 
@@ -206,7 +208,7 @@ MUX MUXDataIn (
   .Select(Ctrl1_RFDAtaIn_Select),
   .Value1(ALU1_Out_out),
   .Value2(DM1_DataOut_out),
-  .Value3({3'b000,VLUT_Value_out}),
+  .Value3(VLUT_Value_out),
   .ValueOut(RF_Data_In)
 );
 
@@ -245,7 +247,7 @@ logic [ 7:0] InA, InB;      // ALU operand inputs
 logic [ 7:0]  ALU_A_In;
 
 MUX MUXA (
-   .Select(Ctrl1_RaddrA_Select),
+   .Select(Ctrl1_ALUA_Select),
    .Value1(RF_DataOutA_out),
    .Value2(Ctr_Output),
    .Value3(8'b00000000),
@@ -256,16 +258,18 @@ MUX MUXA (
 logic [ 7:0] ALU_B_In;
 
 MUX MUXB (
-   .Select(Ctrl1_RaddrB_Select),
+   .Select(Ctrl1_ALUB_Select),
    .Value1(RF_DataOutB_out),
    .Value2({5'b00000,Active_InstOut[2:0]}),
    .Value3(VLUT_Value_out),
    .ValueOut(ALU_B_In)
 );
 
+
 //MUX for deciding which value to use in ALU: 0 => 0, 1 => BitStorage
 logic Bit_Val_in;
-assign Bit_Val_in = (Ctrl1_BitValIn_Select ? 1'b0 : BitStore_out);
+assign Bit_Val_in = (!Ctrl1_ALUBitValIn_Select ? 1'b0 : BitStore_Out);
+
 
 ALU ALU1 (
   .InputA(ALU_A_In),
