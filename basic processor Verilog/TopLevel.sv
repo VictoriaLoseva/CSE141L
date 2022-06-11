@@ -41,32 +41,59 @@ wire [ 9:0] PC1_ProgCtr_out;  // the program counter
 // n.b. "LUT" is a pretty generic name, a nice example
 // of how to do a LUT, but your core should call this
 // something more informative probably...
-wire [ 9:0] LUT1_Target_out;  // Target of branch/jump
+wire [ 7:0] VLUT_Value_out;  // LUT value out
+wire [ 9:0] ALUT_Target_out; // Label addresses, jump/branch targets
 
 // Control block outputs
 logic       Ctrl1_Jump_out;      // to program counter: jump
 logic       Ctrl1_BranchEn_out;  // to program counter: branch enable
-logic       Ctrl1_RegWrEn_out;   // reg_file write enable
+
 logic       Ctrl1_MemWrEn_out;   // data_memory write enable
+
 logic       Ctrl1_LoadInst_out;  // TODO: Why both of these?
 logic       Ctrl1_Ack_out;       // Done with program?
+
 logic [1:0] Ctrl1_TargSel_out;   // one trick to help with target range
 
+logic [2:0] ALUT_Row_in;         // LUT row number
+logic [4:0] VLUT_Row_in;         // VLUT row number
+
+logic [1:0] Ctrl1_RaddrA_Select; // Selects correct Input A
+logic [1:0] Ctrl1_RaddrB_Select; // Selects correct Input B
+logic       Ctrl1_RegWriteEn;    // Write to reg enable
+logic       Ctrl1_RFDAtaIn_Select; //Select correct DataIn
+
+logic       Ctrl1_CtrUnitWrite_en;  //Writing to Ctr
+
+logic       Ctrl1_BitWriteEn;       // Write to bit enable
+logic [2:0] Ctrl1_BitValIn_Select;  //Select value to write into bit
+
+logic [3:0] Ctrl1_ALUOp;
+
+
 // Register file outputs
-logic [7:0] RF1_DataOutA_out; // Contents of first selected register
-logic [7:0] RF1_DataOutB_out; // Contents of second selected register
+logic [7:0] RF_DataOutA_out; // Contents of first selected register
+logic [7:0] RF_DataOutB_out; // Contents of second selected register
+logic       RF_Bit_out;      // Contents of bit storage
 
 // ALU outputs
 logic [7:0] ALU1_Out_out;
 logic       ALU1_Zero_out;
 logic       ALU1_Parity_out;
-logic       ALU1_Odd_out;
+logic       ALU1_Out_bit;
 
 // Data Memory outputs
 logic [7:0] DM1_DataOut_out;  // data out from data_memory
 
-// Output Mux deciding whether ALU or Memory result is used
 logic [ 7:0] ExMem_RegValue_out; // data in to reg file
+
+
+
+//Counter/addr unit output
+logic [ 7:0] Ctr_Output;
+
+//Bit storage output
+logic    BitStore_out;
 
 
 // Extras
@@ -126,14 +153,14 @@ ProgCtr PC1 (
   .BranchAbsEn (Ctrl1_Jump_out),     // jump enable
   .BranchRelEn (Ctrl1_BranchEn_out), // branch enable
   .ALU_flag    (ALU1_Zero_out),      // Maybe your PC will find this useful
-  .Target      (LUT1_Target_out),    // "where to?" or "how far?" during a jump or branch
+  .Target      (ALUT_Target_out),    // "where to?" or "how far?" during a jump or branch
   .ProgCtr     (PC1_ProgCtr_out)     // program count = index to instruction memory
 );
 
 // this is one way to 'expand' the range of jumps available
-LUT LUT1(
-  .Addr         (Ctrl1_TargSel_out),
-  .Target       (LUT1_Target_out)
+VLUT VLUT1(
+  .Row         (Active_InstOut[2:0]),
+  .Value       (VLUT_Value_out)
 );
 
 
@@ -164,11 +191,23 @@ Ctrl Ctrl1 (
   .Instruction  (Active_InstOut),     // from instr_ROM
   .Jump         (Ctrl1_Jump_out),     // to PC to handle jump/branch instructions
   .BranchEn     (Ctrl1_BranchEn_out), // to PC
-  .RegWrEn      (Ctrl1_RegWrEn_out),  // register file write enable
+  .RegWrEn      (Ctrl1_RegWriteEn),  // register file write enable
   .MemWrEn      (Ctrl1_MemWrEn_out),  // data memory write enable
   .LoadInst     (Ctrl1_LoadInst_out), // selects memory vs ALU output as data input to reg_file
   .Ack          (Ctrl1_Ack_out),      // "done" flag
   .TargSel      (Ctrl1_TargSel_out)   // index into lookup table
+);
+
+// Output Mux deciding whether ALU, Memory, or VLUT result is used
+// for DataIn
+logic [ 7:0] RF_Data_In;
+
+MUX MUXDataIn (
+  .Select(Ctrl1_RFDAtaIn_Select),
+  .Value1(ALU1_Out_out),
+  .Value2(DM1_DataOut_out),
+  .Value3({3'b000,VLUT_Value_out}),
+  .ValueOut(RF_Data_In)
 );
 
 // Register file
@@ -176,19 +215,14 @@ Ctrl Ctrl1 (
 RegFile #(.W(8),.A(3)) RF1 (
   .Clk       (Clk),
   .Reset     (Reset),
-  .WriteEn   (Ctrl1_RegWrEn_out),
-  .RaddrA    (Active_InstOut[5:3]),      // See example below on how 3 opcode bits
-  .RaddrB    (Active_InstOut[2:0]),      // could address 16 registers...
-  .Waddr     (Active_InstOut[5:3]),      // mux above
-  .DataIn    (ExMem_RegValue_out),
-  .DataOutA  (RF1_DataOutA_out),
-  .DataOutB  (RF1_DataOutB_out)
+  .WriteEn   (Ctrl1_RegWriteEn),
+  .RaddrA    (Active_InstOut[4:3]),      // See example below on how 3 opcode bits
+  .RaddrB    (Active_InstOut[2:1]),      // could address 16 registers...
+  .Waddr     (Active_InstOut[4:3]),      // mux above
+  .DataIn    (RF_Data_In),
+  .DataOutA  (RF_DataOutA_out),
+  .DataOutB  (RF_DataOutB_out)
 );
-// Here's a neat trick:
-//   one pointer, two adjacent read accesses:
-//   (sample optional approach)
-//	.RaddrA ({Active_InstOut[5:3],1'b0});
-//	.RaddrB ({Active_InstOut[5:3],1'b1});
 
 // Also need to hook up the signal back to the testbench for when we're done.
 assign Ack = should_run_processor & Ctrl1_Ack_out;
@@ -207,35 +241,82 @@ assign Ack = should_run_processor & Ctrl1_Ack_out;
 // if you need an local mux for the input
 logic [ 7:0] InA, InB;      // ALU operand inputs
 
-// No decision logic for these in this implementation
-assign InA = RF1_DataOutA_out;     // connect RF out to ALU in
-assign InB = RF1_DataOutB_out;     // interject switch/mux if needed/desired
+//Output Mux deciding whether RegOutA or Ctr is used for ALU A
+logic [ 7:0]  ALU_A_In;
+
+MUX MUXA (
+   .Select(Ctrl1_RaddrA_Select),
+   .Value1(RF_DataOutA_out),
+   .Value2(Ctr_Output),
+   .Value3(8'b00000000),
+   .ValueOut(ALU_A_In)
+);
+
+//Output Mux deciding whether RegOutB, imm, or VLUT is used for ALU B
+logic [ 7:0] ALU_B_In;
+
+MUX MUXB (
+   .Select(Ctrl1_RaddrB_Select),
+   .Value1(RF_DataOutB_out),
+   .Value2({5'b00000,Active_InstOut[2:0]}),
+   .Value3(VLUT_Value_out),
+   .ValueOut(ALU_B_In)
+);
+
+//MUX for deciding which value to use in ALU: 0 => 0, 1 => BitStorage
+logic Bit_Val_in;
+assign Bit_Val_in = (Ctrl1_BitValIn_Select ? 1'b0 : BitStore_out);
 
 ALU ALU1 (
-  .InputA  (InA),
-  .InputB  (InB),
-  .SC_in   (1'b1),
-  .OP      (Active_InstOut[8:6]),
-  .Out     (ALU1_Out_out),
-  .Zero    (ALU1_Zero_out),
-  .Parity  (ALU1_Parity_out),
-  .Odd     (ALU1_Odd_out)
+  .InputA(ALU_A_In),
+  .InputB(ALU_B_In),
+  .SC_in(Bit_Val_in),
+  .imm(Active_InstOut[2:0]),
+  .Out(ALU1_Out_out),
+  .Zero(ALU1_Zero_out),
+  .OutBit(ALU1_Out_bit),
+  .Parity(ALU1_Parity_out)
+  );
+
+logic [7:0] Ctr_To_Mem;
+
+COUNTER CTR1(
+   .Clk(Clk),
+   .Reset(Reset),
+   .WriteEn(Ctrl1_CtrUnitWrite_en),
+   .ValIn(ALU1_Out_out),
+   .ValOut(Ctr_To_Mem)
 );
 
 
+//Output Mux deciding whether BitOut, Parity, or Zero are stored
+logic        BitStorage_In;
+
+always_comb begin
+  case(Ctrl1_BitValIn_Select)
+    2'b01:   BitStorage_In = ALU1_Parity_out;  //XOR
+    2'b10:   BitStorage_In = ALU1_Out_bit;     //GETB
+    default: BitStorage_In = 1'b0;             //reset bit
+  endcase
+end
+
+BitStorage BITST(
+  .Clk(Clk),
+  .Reset(Reset),
+  .WriteEn(Ctrl1_BitWriteEn),
+  .BitValIn(BitStorage_In),
+  .BitOut(BitStore_out)
+);
+
 DataMem DM1(
-  .DataAddress  (RF1_DataOutB_out),
+  .DataAddress  (Ctr_To_Mem),
   .WriteEn      (Ctrl1_MemWrEn_out),
-  .DataIn       (RF1_DataOutA_out),
+  .DataIn       (RF_DataOutA_out),
   .DataOut      (DM1_DataOut_out),
   .Clk          (Clk),
   .Reset        (Reset)
 );
 
-// An output mux from this block, are we using the ALU result or the memory
-// result this cycle?  Controlled by Ctrl1 -- must be high for load from
-// data_mem; otherwise usually low
-assign ExMem_RegValue_out = Ctrl1_LoadInst_out ? DM1_DataOut_out : ALU1_Out_out;
 //////////////////////////////////////////////////////////// Execute + Memory //
 
 
@@ -251,4 +332,3 @@ always_ff @(posedge Clk)
   else if(Ctrl1_Ack_out == 0)   // if(!halt) ?
     CycleCount <= CycleCount + 'b1;
 endmodule
-

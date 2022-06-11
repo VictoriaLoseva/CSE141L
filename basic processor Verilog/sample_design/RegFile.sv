@@ -13,6 +13,7 @@ module RegFile #(parameter W=8, A=2)(
   input                Clk,
   input                Reset,
   input                WriteEn,
+  input                WriteBitEn,
   input                bitValIn,
   input                uppOrLow,
   input        [A-1:0] RaddrA,    // address pointers
@@ -27,7 +28,7 @@ module RegFile #(parameter W=8, A=2)(
 // W bits wide [W-1:0] and 2**A registers deep
 //   When W=8 bit wide registers and A=4 to address 16 registers
 //   then this could be written `logic [7:0] registers[16]`
-logic [W-1:0] Registers[5];
+logic [W-1:0] Registers[6];
 
 
 // combinational reads

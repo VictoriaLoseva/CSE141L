@@ -50,9 +50,8 @@ always_comb begin
 end
 
 assign Zero   = ~|Out;                  // reduction NOR
-assign Parity = ^InputA;                   // reduction XOR
+assign Parity = ^InputA ^ SC_in;        // reduction XOR
 assign reset = 0;
-
 // Toolchain guard: icarus verilog doesn't support this debug feature.
 `ifndef __ICARUS__
 always_comb
