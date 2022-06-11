@@ -1,7 +1,10 @@
+ZERO = 0
+
 T1R = 1
 T2R = 2
 TI = 3
 TLUT = 4
+
 
 OPCODE = {  'lw':   '0000',\
             'inc':  '0001',\
@@ -38,6 +41,13 @@ REG_CODE = {'r1': '00',\
             'r3': '10',\
             'r4': '11'}
 
+LUT = []
+LUT.append(ZERO)
+LUT_next_index = 1
+
+TAG = {}
+TAG[ZERO] = 0
+
 class Instruction:
     def __init__(self, instruction, pc = None):
         self.instruction = instruction
@@ -55,6 +65,7 @@ class Instruction:
     def getMachineCode(self):
         if self.getParsedList() == -1:
             return None
+        self.parseTag()
         self.parseOpcode()
         self.parse()
         self.machineCode = self.opcode + self.rd + self.rs + self.h + self.lut + self.imm
@@ -92,6 +103,22 @@ class Instruction:
         self.opcode = OPCODE[self.parsedList[0]]
         return self.opcode
 
+    def parseTag(self):
+        firstItem = self.parsedList[0]
+        if firstItem[-1] == ':':
+            firstItem = firstItem[:-1]
+            self.parsedList.pop(0)
+            if firstItem not in TAG.keys():
+                # first time appear
+                LUT.append(self.pc)
+                global LUT_next_index
+                TAG[firstItem] = LUT_next_index
+                LUT_next_index += 1
+            else:
+                # replace previous tag
+                index = TAG[firstItem]
+                LUT[index] = self.pc
+
     def getParsedList(self):
         if self.instruction == None or self.instruction == '':
             return -1
@@ -99,7 +126,7 @@ class Instruction:
         if ins[-1] == '\n':
             ins = ins[:-1]
         for i in range(len(ins)):
-            if ins[i] == ',':
+            if ins[i] == ',' or ins[i] == '\t':
                 ins = ins[:i] + ' ' + ins[i+1:]
         ins = ins.lower().split(' ')
         ins = [x for x in ins if x != '']
@@ -141,3 +168,4 @@ def write_machine_code_to_file(input_file, output_file):
 
 
 write_machine_code_to_file('program.sv', "machineCode.txt")
+print(LUT)
