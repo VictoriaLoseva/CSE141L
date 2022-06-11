@@ -1,12 +1,24 @@
 ZERO = 0
+zero = 0
+
+thirty = 30
 
 T1R = 1
 T2R = 2
 TI = 3
 TLUT = 4
 
+parity = 8
 
-OPCODE = {  'lw':   '0000',\
+mp0 = 2
+mp1 = 3
+mp2 = 4
+mp4 = 5
+mp8 = 6
+
+
+OPCODE = {  'sw':   '0000',\
+            'lw':   '0000',\
             'inc':  '0001',\
             'luv':  '0010',\
             'and':  '0011',\
@@ -21,7 +33,8 @@ OPCODE = {  'lw':   '0000',\
             'beq':  '1100',\
             'rb':   '1101' }
 
-TYPE_CHART = {  'lw':   T1R,\
+TYPE_CHART = {  'sw':   T1R,\
+                'lw':   T1R,\
                 'inc':  TLUT,\
                 'luv':  T1R,\
                 'and':  T2R,\
@@ -29,7 +42,7 @@ TYPE_CHART = {  'lw':   T1R,\
                 'sb':   TI,\
                 'gb':   TI,\
                 'flip': TI,\
-                'xor':  T2R,\
+                'xor':  TI,\
                 'loop': TLUT,\
                 'shr':  T2R,\
                 'goto': TLUT,\
@@ -39,7 +52,15 @@ TYPE_CHART = {  'lw':   T1R,\
 REG_CODE = {'r1': '00',\
             'r2': '01',\
             'r3': '10',\
-            'r4': '11'}
+            'r4': '11',\
+            '$addr': '00',\
+            '$read': '01',\
+            '$write': '10',\
+            '$work': '11',\
+            '$ctr': '00',\
+            '$work1': '10',\
+            '$work2': '11'\
+            }
 
 LUT = []
 LUT.append(ZERO)
@@ -73,10 +94,16 @@ class Instruction:
 
     def parse(self):
         l = self.parsedList
+        if len(l) < 1:
+            return
         self.type = TYPE_CHART[l[0]]
         if self.type == T1R:
+            if len(l) < 2:
+                return
             self.rd = REG_CODE[l[1]]
-            self.lut = str(bin(int(l[2])))[2:]
+            if len(l) < 3:
+                return
+            self.lut = str(bin(eval(l[2])))[2:]
             self.lut = self.formatBinary(self.lut, 3)
 
         elif self.type == T2R:
@@ -89,19 +116,29 @@ class Instruction:
                 self.rs = '00'
                 self.imm = '000'
             else:
+                if len(l) < 2:
+                    return
                 self.rs = REG_CODE[l[1]]
-                self.imm = str(bin(int(l[2])))[2:]
+                if len(l) < 3:
+                    return
+                self.imm = str(bin(eval(l[2])))[2:]
                 self.imm = self.formatBinary(self.imm, 3)
 
         elif self.type == TLUT:
-            self.lut = str(bin(int(l[1])))[2:]
+            if l[1] in TAG.keys():
+                val = TAG[l[1]]
+                lut = LUT[val]
+                self.lut = str(bin(lut))[2:]
+            else:
+                self.lut = str(bin(eval(l[1])))[2:]
             self.lut = self.formatBinary(self.lut, 5)
 
         return
 
     def parseOpcode(self):
-        self.opcode = OPCODE[self.parsedList[0]]
-        return self.opcode
+        if len(self.parsedList) > 0:
+            self.opcode = OPCODE[self.parsedList[0]]
+            return self.opcode
 
     def parseTag(self):
         firstItem = self.parsedList[0]
@@ -126,8 +163,12 @@ class Instruction:
         if ins[-1] == '\n':
             ins = ins[:-1]
         for i in range(len(ins)):
+            if ins[i] == '#':
+                ins = ins[:i]
+                break
             if ins[i] == ',' or ins[i] == '\t':
                 ins = ins[:i] + ' ' + ins[i+1:]
+
         ins = ins.lower().split(' ')
         ins = [x for x in ins if x != '']
         self.parsedList = ins
@@ -142,7 +183,7 @@ class Instruction:
             binstr = binstr[1:]
         return binstr
 
-def write_machine_code_to_file(input_file, output_file):
+def write_machine_code_to_file(input_file):
     lines = []
     machine_code_list = []
 
@@ -159,13 +200,19 @@ def write_machine_code_to_file(input_file, output_file):
         machine_code_list.append(machine_code)
 
     # write machine code to output file
-    f = open(output_file, "w")
+    f_name = "machine_code_" + input_file
+    for i in range(len(f_name)):
+        if f_name[i] == '.':
+            f_name = f_name[:i]
+            break
+    f = open(f_name, "w")
     print('file created')
     for code in machine_code_list:
         if code:
-            f.write(code+'\n')
+            f.write(code)
+    f.write('\n'+str(LUT))
     f.close()
 
 
-write_machine_code_to_file('program.sv', "machineCode.txt")
-print(LUT)
+write_machine_code_to_file('program2.sv')
+# print(LUT)
