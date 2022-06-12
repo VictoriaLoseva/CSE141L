@@ -1,7 +1,8 @@
 ZERO = 0
 zero = 0
-
+one = 1
 thirty = 30
+sixty = 60
 
 T1R = 1
 T2R = 2
@@ -55,6 +56,8 @@ REG_CODE = {'r1': '00',\
             'r4': '11',\
             '$addr': '00',\
             '$read': '01',\
+            '$readU': '00',\
+            '$readL': '01',\
             '$write': '10',\
             '$work': '11',\
             '$ctr': '00',\
@@ -98,6 +101,7 @@ class Instruction:
             return
         self.type = TYPE_CHART[l[0]]
         if self.type == T1R:
+
             if len(l) < 2:
                 return
             self.rd = REG_CODE[l[1]]
@@ -205,14 +209,31 @@ def write_machine_code_to_file(input_file):
         if f_name[i] == '.':
             f_name = f_name[:i]
             break
-    f = open(f_name, "w")
-    print('file created')
+    # f = open(f_name, "w")
+    # print('file created')
+    # for code in machine_code_list:
+    #     if code:
+    #         while len(code) < 9:
+    #             code += '0'
+    #         f.write(code+'\n')
+    # f.write(str(LUT))
+    # f.close()
+
+    int_list = []
     for code in machine_code_list:
         if code:
-            f.write(code)
-    f.write('\n'+str(LUT))
+            code = '0b' + code
+            print(code)
+            code = int(eval(code))
+            print(code)
+            int_list.append(code)
+
+    print(int_list)
+    f = open(f_name, "wb")
+    newFileByteArray = bytearray(int_list)
+    f.write(newFileByteArray)
     f.close()
 
 
-write_machine_code_to_file('program2.sv')
+write_machine_code_to_file('program.sv')
 # print(LUT)
