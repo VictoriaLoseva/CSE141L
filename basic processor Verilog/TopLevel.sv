@@ -6,7 +6,6 @@ module TopLevel(
   input        Reset,      // init/reset, active high
                Start,      // start next program
                Clk,        // clock -- posedge used inside design
-  output logic [7:0] ALUDebug,
   output logic Ack         // done flag from DUT
 );
 
@@ -56,21 +55,21 @@ logic       Ctrl1_Ack_out;       // Done with program?
 
 logic [1:0] Ctrl1_TargSel_out;   // one trick to help with target range
 logic       Ctrl1_GotoEn;
-logic       Ctrl1_JumpEn;
+logic       Ctrl1_Jump2En;
 
-logic [2:0] ALUT_Row_in;         // LUT row number
-logic [4:0] VLUT_Row_in;         // VLUT row number
+logic [4:0] ALUT_Row_in;         // LUT row number
+logic [2:0] VLUT_Row_in;         // VLUT row number
 
 logic [1:0] Ctrl1_ALUA_Select; // Selects correct Input A
 logic [1:0] Ctrl1_ALUB_Select; // Selects correct Input B
 logic       Ctrl1_ALUBitValIn_Select;
 logic       Ctrl1_RegWriteEn;    // Write to reg enable
-logic [2:0] Ctrl1_RFDAtaIn_Select; //Select correct DataIn
+logic [1:0] Ctrl1_RFDAtaIn_Select; //Select correct DataIn
 
 logic       Ctrl1_CtrUnitWrite_en;  //Writing to Ctr
 
 logic       Ctrl1_BitWriteEn;       // Write to bit enable
-logic [2:0] Ctrl1_BitValIn_Select;  //Select value to write into bit
+logic [1:0] Ctrl1_BitValIn_Select;  //Select value to write into bit
 
 logic [3:0] Ctrl1_ALUOp;
 
@@ -154,14 +153,14 @@ ProgCtr PC1 (
   .Reset       (Reset),              // reset to 0
   .Start       (Start),              // Your PC will have to do something smart with this
   .Clk         (Clk),                // System CLK
-  .BranchAbsEn (Ctrl1_Jump_out),     // jump enable
-  .BranchRelEn (Ctrl1_BranchEn_out), // branch enable
+  .GotoEn      (Ctrl1_GotoEn),       // jump enable
+  .Jump2En     (Ctrl1_Jump2En), // branch enable
   .ALU_flag    (ALU1_Zero_out),      // Maybe your PC will find this useful
   .Target      (ALUT_Target_out),    // "where to?" or "how far?" during a jump or branch
   .ProgCtr     (PC1_ProgCtr_out)     // program count = index to instruction memory
 );
 
-P
+
 // this is one way to 'expand' the range of jumps available
 VLUT VLUT1(
   .Row         (Active_InstOut[2:0]),
@@ -191,24 +190,10 @@ end
 ////////////////////////////////////////////////////////////////////////////////
 // Decode = Control Decoder + Reg_file
 
-// Control decoder
-Ctrl Ctrl1 (
-  .Instruction  (Active_InstOut),     // from instr_ROM
-  .Jump         (Ctrl1_Jump_out),     // to PC to handle jump/branch instructions
-  .BranchEn     (Ctrl1_BranchEn_out), // to PC
-  .RegWrEn      (Ctrl1_RegWriteEn),  // register file write enable
-  .MemWrEn      (Ctrl1_MemWrEn_out),  // data memory write enable
-  .LoadInst     (Ctrl1_LoadInst_out), // selects memory vs ALU output as data input to reg_file
-  .Ack          (Ctrl1_Ack_out),      // "done" flag
-  .TargSel      (Ctrl1_TargSel_out)   // index into lookup table
-);
-
-Ctrl PC1(
+Ctrl Ctrl1(
     .Instruction   (Active_InstOut),
-    .Jump          (Ctrl1_Jump_out),
-    .BranchEn      (Ctrl1_BranchEn),
-    .MemWrEn       (Ctrl1_Mem),
-    .Ack,          (Ctrl1_Ack_Out),
+    .MemWrEn       (Ctrl1_MemWrEn_out),
+    .Ack           (Ctrl1_Ack_out),
     .RegWrEn       (Ctrl1_RegWriteEn),
     .CtrUnitWriteEn(Ctrl1_CtrUnitWrite_en),
     .BitWriteEn    (Crl1_BitWriteEn),
@@ -236,12 +221,13 @@ MUX MUXDataIn (
 
 // Register file
 // A(3) makes this 2**3=8 elements deep
-RegFile #(.W(8),.A(3)) RF1 (
+RegFile #(.W(8),.A(2)) RF1 (
   .Clk       (Clk),
   .Reset     (Reset),
   .WriteEn   (Ctrl1_RegWriteEn),
   .RaddrA    (Active_InstOut[4:3]),      // See example below on how 3 opcode bits
   .RaddrB    (Active_InstOut[2:1]),      // could address 16 registers...
+  .uppOrLow  (Active_InstOut[0]),
   .Waddr     (Active_InstOut[4:3]),      // mux above
   .DataIn    (RF_Data_In),
   .DataOutA  (RF_DataOutA_out),
@@ -290,13 +276,13 @@ MUX MUXB (
 
 //MUX for deciding which value to use in ALU: 0 => 0, 1 => BitStorage
 logic Bit_Val_in;
-assign Bit_Val_in = (!Ctrl1_ALUBitValIn_Select ? 1'b0 : BitStore_Out);
+assign Bit_Val_in = (!Ctrl1_ALUBitValIn_Select ? 1'b0 : BitStore_out);
 
 
 ALU ALU1 (
   .InputA(ALU_A_In),
   .InputB(ALU_B_In),
-  .Op(Ctrl1_ALUOp),
+  .OP(Ctrl1_ALUOp),
   .SC_in(Bit_Val_in),
   .imm(Active_InstOut[2:0]),
   .Out(ALU1_Out_out),
@@ -305,15 +291,13 @@ ALU ALU1 (
   .Parity(ALU1_Parity_out)
   );
 
-logic [7:0] Ctr_To_Mem;
-
 COUNTER CTR1(
    .Clk(Clk),
    .Reset(Reset),
    .WriteEn(Ctrl1_CtrUnitWrite_en),
    .Offset(Active_InstOut[2:1]),
    .ValIn(ALU1_Out_out),
-   .ValOut(Ctr_To_Mem)
+   .ValOut(Ctr_Output)
 );
 
 
@@ -337,7 +321,7 @@ BitStorage BITST(
 );
 
 DataMem DM1(
-  .DataAddress  (Ctr_To_Mem),
+  .DataAddress  (Ctr_Output),
   .WriteEn      (Ctrl1_MemWrEn_out),
   .DataIn       (RF_DataOutA_out),
   .DataOut      (DM1_DataOut_out),

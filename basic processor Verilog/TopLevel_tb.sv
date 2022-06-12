@@ -35,6 +35,8 @@ TopLevel DUT (
 
 // This is the important part of the testbench, where logic might be added
 initial begin
+  #10 $display("Hello");
+  #10 $displayb(DUT.IR1.inst_rom[0]);
   #10 $displayh(DUT.DM1.Core[0],
                 DUT.DM1.Core[1],"_",
                 DUT.DM1.Core[2],
@@ -113,4 +115,3 @@ end
 `endif
 
 endmodule
-

@@ -30,7 +30,7 @@ always_comb
 
 // Load the initial contents of memory
 initial begin
-  $readmemh("../data_mem.hex", Core);
+  //$readmemh("/Users/vika/Documents/CSE 141L/data_mem.hex", Core);
 end
 
 // writes are sequential
@@ -45,6 +45,7 @@ always_ff @ (posedge Clk)
 
   if(Reset) begin
     // Usually easier to initialize memory by reading from file, as above.
+    //$readmemh("/Users/vika/Documents/CSE 141L/data_mem.hex", Core);
   end else if(WriteEn) begin
     // Do the actual writes
     Core[DataAddress] <= DataIn;
