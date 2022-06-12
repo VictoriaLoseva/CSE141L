@@ -64,8 +64,8 @@ REG_CODE = {'r1': '00',\
             '$writeL': '00',\
             '$work': '11',\
             '$ctr': '00',\
-            '$work1': '10',\
-            '$work2': '11'\
+            '$work1': '01',\
+            '$work2': '10'\
             }
 
 LUT = []
@@ -104,7 +104,7 @@ class Instruction:
             return
         self.type = TYPE_CHART[l[0]]
         if self.type == T1R:
-
+            # sw and lw
             if len(l) < 2:
                 return
             self.rd = REG_CODE[l[1]]
