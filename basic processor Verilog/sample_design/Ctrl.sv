@@ -16,7 +16,6 @@ module Ctrl (
   output logic       Jump,
                      BranchEn,
                      MemWrEn,
-                     LoadInst,
                      Ack,      // "done with program"
                      RegWrEn,
                      CtrUnitWriteEn,
@@ -27,9 +26,7 @@ module Ctrl (
   output logic [1:0] ALUA_Select,
                      ALUB_Select,
                      BitValIn_Select,
-  output logic [2:0] ALUT_Row_in,
-                     RFDAtaIn_Select,
-                     CtrOffset,
+  output logic [2:0] RFDAtaIn_Select,
   output logic [3:0] ALUOp,
   output logic [4:0] VLUT_Row_in
 );
@@ -49,12 +46,9 @@ always_comb begin
 
   ALUA_Select = 2'b00;
   ALUB_Select = 2'b00;
-  ALUT_Row_in = 3'b000;
   RFDAtaIn_Select = 3'b00;
   BitValIn_Select = 3'b000;
-  CtrOffset = 3'b000;
   ALUOp = 4'b000;
-  VLUT_Row_in = 5'b00000;
 
 
   //Next, go Instruction by instruction to assign actual values
@@ -62,7 +56,6 @@ always_comb begin
   case(Instruction[8:6])
     4'b0000: begin                        //Load word
         RegWrEn = 1'b1;
-        CtrOffset = Insruction[2:1];
       end
     4'b0001: begin                        //Inc
         CtrUnitWriteEn = 1'b1;
@@ -148,46 +141,7 @@ always_comb begin
       end
     4'b1110: begin                        //sw
         MemWrEn = 1'b1;
-        CtrOffset = Insruction[2:1];
       end
 
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// instruction = 9'b110??????;
-assign MemWrEn = Instruction[8:6] == 3'b110;
-
-assign RegWrEn = Instruction[8:7] != 2'b11;
-assign LoadInst = Instruction[8:6] == 3'b011;
-
-
-
-// jump on right shift that generates a zero
-// equiv to simply: assign Jump = Instruction[2:0] == RSH;
-always_comb begin
-/*  if(Instruction[2:0] == RSH) begin
-    Jump = 1;
-  end else begin
-    Jump = 0;
-  end */
-end
-
-// branch every time instruction = 9'b?????1111;
-assign BranchEn = &Instruction[3:0];
-
-// Maybe define specific types of branches?
-assign TargSel  = Instruction[3:2];
-
 endmodule

@@ -55,6 +55,8 @@ logic       Ctrl1_LoadInst_out;  // TODO: Why both of these?
 logic       Ctrl1_Ack_out;       // Done with program?
 
 logic [1:0] Ctrl1_TargSel_out;   // one trick to help with target range
+logic       Ctrl1_GotoEn;
+logic       Ctrl1_JumpEn;
 
 logic [2:0] ALUT_Row_in;         // LUT row number
 logic [4:0] VLUT_Row_in;         // VLUT row number
@@ -159,6 +161,7 @@ ProgCtr PC1 (
   .ProgCtr     (PC1_ProgCtr_out)     // program count = index to instruction memory
 );
 
+P
 // this is one way to 'expand' the range of jumps available
 VLUT VLUT1(
   .Row         (Active_InstOut[2:0]),
@@ -198,6 +201,25 @@ Ctrl Ctrl1 (
   .LoadInst     (Ctrl1_LoadInst_out), // selects memory vs ALU output as data input to reg_file
   .Ack          (Ctrl1_Ack_out),      // "done" flag
   .TargSel      (Ctrl1_TargSel_out)   // index into lookup table
+);
+
+Ctrl PC1(
+    .Instruction   (Active_InstOut),
+    .Jump          (Ctrl1_Jump_out),
+    .BranchEn      (Ctrl1_BranchEn),
+    .MemWrEn       (Ctrl1_Mem),
+    .Ack,          (Ctrl1_Ack_Out),
+    .RegWrEn       (Ctrl1_RegWriteEn),
+    .CtrUnitWriteEn(Ctrl1_CtrUnitWrite_en),
+    .BitWriteEn    (Crl1_BitWriteEn),
+    .GotoEn        (Ctrl1_GotoEn),
+    .Jump2En       (Ctrl1_Jump2En),
+    .ALUBitValIn_Select(Ctrl1_ALUBitValIn_Select),
+    .ALUA_Select   (Ctrl1_ALUA_Select),
+    .ALUB_Select   (Ctrl1_ALUB_Select),
+    .BitValIn_Select(Ctrl1_BitValIn_Select),
+    .RFDAtaIn_Select(Ctrl1_RFDAtaIn_Select),
+    .ALUOp          (Ctrl1_ALUOp)
 );
 
 // Output Mux deciding whether ALU, Memory, or VLUT result is used
@@ -274,6 +296,7 @@ assign Bit_Val_in = (!Ctrl1_ALUBitValIn_Select ? 1'b0 : BitStore_Out);
 ALU ALU1 (
   .InputA(ALU_A_In),
   .InputB(ALU_B_In),
+  .Op(Ctrl1_ALUOp),
   .SC_in(Bit_Val_in),
   .imm(Active_InstOut[2:0]),
   .Out(ALU1_Out_out),
@@ -288,6 +311,7 @@ COUNTER CTR1(
    .Clk(Clk),
    .Reset(Reset),
    .WriteEn(Ctrl1_CtrUnitWrite_en),
+   .Offset(Active_InstOut[2:1]),
    .ValIn(ALU1_Out_out),
    .ValOut(Ctr_To_Mem)
 );
